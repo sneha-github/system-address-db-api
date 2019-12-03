@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+    <apikit:config name="system-address-db-api-config" api="system-address-db-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="system-address-db-api-main">
+        <http:listener xmlns:http="http://www.mulesoft.org/schema/mule/http" config-ref="httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" config-ref="system-address-db-api-config" />
+      <error-handler ref="globalError_Handler" />
+    </flow>
+    <flow name="system-address-db-api-console">
+        <http:listener xmlns:http="http://www.mulesoft.org/schema/mule/http" config-ref="httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" config-ref="system-address-db-api-config" />
+      <error-handler ref="globalError_Handler" />
+    </flow>
+    <flow name="put:\addressDetails:application\json:system-address-db-api-config">	
+     <flow-ref doc:name="Flow Reference" doc:id="950dd67d-4e40-4d71-bb0e-0907fb066597" name="updateAddressDetails"/>
+		<error-handler ref="globalError_Handler" />
+    </flow>
+    <flow name="delete:\addressDetails:system-address-db-api-config">
+        
+      <flow-ref doc:name="Flow Reference" doc:id="29f9a289-fcc7-4874-9534-7382672a144a" name="deleteAddressDetails"/>
+		<error-handler ref="globalError_Handler" />
+    </flow>
+    <flow name="get:\addressDetails:system-address-db-api-config">
+		
+     <flow-ref doc:name="Flow Reference" doc:id="a616970c-43f8-4485-96ce-b045da6e813e" name="getAddressDetails"/>
+		<error-handler ref="globalError_Handler" />
+    </flow>
+    <flow name="post:\addressDetails:application\json:system-address-db-api-config">
+		
+     <flow-ref doc:name="Flow Reference" doc:id="98ee45e6-13f8-4b4d-9f1a-5d6235cf27e8" name="insertAddressDetails"/>
+		<error-handler ref="globalError_Handler" />
+    </flow>
+</mule>

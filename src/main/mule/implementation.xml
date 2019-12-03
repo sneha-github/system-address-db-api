@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+<flow name="getAddressDetails" doc:id="3ddc2517-8fd2-489d-be50-3b2f67010e16" >
+		<set-variable value="#[attributes.headers]" doc:name="headers" doc:id="1479f816-352d-4f74-a2c6-a93635b65c28" variableName="headers"/>
+		<logger level="INFO" doc:name="Logger" doc:id="59375bd3-e049-4424-b866-a2641b176fc2" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Request received to get contact details&quot;
+}]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="1268bc21-63c8-4c8d-adb7-65918b33eba5" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message: &quot;requesting database to get contact details&quot;
+}]" />
+		<db:select doc:name="Select" doc:id="5dd351a2-228e-4a5b-99d0-059c202d4700" config-ref="Database_Config">
+			<db:sql >Select id as addressId, contactId, type as addressType, number, street,  unit,  city, state,  zipcode from contactAddress where contactId = :contactId</db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	contactId: attributes.queryParams.contactId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="9d28b90c-9540-46c4-8188-bcdf769b2155" >
+			<when expression="#[sizeOf(payload) != 0]">
+				<logger level="INFO" doc:name="Logger" doc:id="e52086ec-b266-4a1b-a399-a2121370a87a" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message: &quot;Details fetched from the database&quot;
+}]" />
+				<ee:transform doc:name="Transform Message" doc:id="16020c70-4f4b-4b23-bdf7-62d43ea8190b" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"address": payload map {
+        "addressId": $.addressId,
+		"contactId": $.contactId,
+		"addressType": $.addressType,
+		"number": $.number,
+		"street": $.street,
+		"unit": $.unit,
+		"city": $.city,
+		"state": $.state,
+		"zipcode": $.zipcode
+		}
+    }]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+
+</when>
+			<otherwise >
+				<raise-error doc:name="Raise error" doc:id="cf62c928-23bd-4da6-b88b-d686fdc4b8ff" type="CONTACT:NOT_FOUND" description="There are no contacts available"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="insertAddressDetails" doc:id="6e68726d-8d93-4035-807d-b7f1cfb1e063" >
+		<set-variable value="#[attributes.headers]" doc:name="headers" doc:id="8fd41be2-a273-4829-939e-785d80bdb616" variableName="headers"/>
+		<logger level="INFO" doc:name="Logger" doc:id="38e0e98a-401b-4fbe-94ed-10062c2acd84" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Request received to post contact details&quot;
+}]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="4ef780fd-b4fa-41ad-b66a-2e024502d3a2" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Sending request to Database&quot;
+}]"/>
+		<foreach doc:name="For Each" doc:id="57a3c6e5-e96e-4865-9add-f62820d5fa43" collection="#[payload.address]">
+			<db:insert doc:name="Insert" doc:id="f74b508b-f626-4abb-b1fe-7ef7289430ba" config-ref="Database_Config">
+				<db:sql >Insert into contactAddress VALUES (:contactId, :addressType, :number, :street, :unit, :city, :state, :zipcode)</db:sql>
+				<db:input-parameters ><![CDATA[#[{
+	addressType: payload.addressType ,
+	contactId: payload.contactId,
+	number: payload.number,
+	street: payload.street,
+	unit: payload.unit ,
+	city: payload.city ,
+	state: payload.state ,
+	zipcode: payload.zipcode 
+}]]]></db:input-parameters>
+			</db:insert>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="e851a2ac-91ba-4b49-973e-7cb61322bcc0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  Success: "Data Saved Successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="56b961bf-104f-44a1-be83-318a4157619e" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Database call finished&quot;
+}]" />
+	</flow>
+	<flow name="updateAddressDetails" doc:id="086ed5e1-9cb3-4874-9465-db47356e8a46" >
+		<set-variable value="#[attributes.headers]" doc:name="headers" doc:id="bd761993-27ce-454f-9ca0-0abef7afa3e9" variableName="headers"/>
+		<logger level="TRACE" doc:name="Logger" doc:id="95767248-44c0-4552-b291-6cf1360fb66a" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Request Recieved.&quot;
+}]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f4ae16d5-5bab-49ee-b242-33e9535d706a" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Database call started&quot;
+}]" />
+		<foreach doc:name="For Each" doc:id="3e91c288-99ed-40bf-8c41-0dc276475a92" collection="#[payload.address]">
+			<db:update doc:name="Update" doc:id="20052684-b9c1-444a-870c-9a62c67d0692" config-ref="Database_Config">
+			<db:sql>Update contactAddress set  number= :number, street= :street, unit= :unit, city= :city, state= :state, zipcode= :zipcode where contactId= :contactId and type = :addressType</db:sql>
+			<db:input-parameters><![CDATA[#[{
+	contactId: payload.contactId,
+	addressType: payload.addressType,
+	number: payload.number,
+	street: payload.street,
+	unit: payload.unit,
+	city: payload.city,
+	state: payload.state,
+	zipcode: payload.zipcode
+}]]]></db:input-parameters>
+		</db:update>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="f8689bd6-1dea-469f-9382-872f65e90485" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  Success: "Data Saved Successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="12ddcabc-cd08-4d57-83fc-6fdc5b53e8dc" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message:&quot;Database call finished&quot;
+}]" />
+	</flow>
+	<flow name="deleteAddressDetails" doc:id="d8126d18-6c04-4930-96af-0265c3c99cad" >
+	<set-variable value="#[attributes.headers]" doc:name="headers" doc:id="b7babb0c-9fad-4e7b-a9c7-3322aee78a21" variableName="headers"/>
+		<logger level="INFO" doc:name="Logger" doc:id="829e19d8-2be9-4a57-b6c2-c5ce56a05355" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message: &quot;request received for deleting contact's Address details&quot;
+}]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="cdaf6f18-9fd4-4080-89e5-ef09d16e57bf" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message: &quot;Requesting database to delete contact's Address details&quot;
+}]" />
+		<db:delete doc:name="Delete" doc:id="e9b4af3f-0c9a-45fb-a4d4-21eeef1a02f1" config-ref="Database_Config">
+			<db:sql >Delete  from contactAddress where contactId= :contactId</db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	contactId: attributes.queryParams.contactId
+}]]]></db:input-parameters>
+		</db:delete>
+		<logger level="INFO" doc:name="Logger" doc:id="c8d7e743-4d08-484f-bad9-13645f88a98f" message="#[output application/json
+---
+{
+	correlationId: vars.headers.'X-correlation-id',
+	sessionId: vars.headers.'X-session-id',
+	applicationName: app.name,
+	message: &quot;Details deleted from Database&quot;
+}]" />
+	</flow>
+</mule>
